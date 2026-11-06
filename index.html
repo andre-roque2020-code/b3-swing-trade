@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>B3 Swing Trade Pro | Analisador Oficial B3</title>
+  <meta name="theme-color" content="#10b981">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/bullish.png">
+  
+  <!-- Tailwind CSS & Chart.js via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      background-color: #0b0f17;
+      color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card-glass {
+      background: rgba(22, 29, 41, 0.95);
+      border: 1px solid rgba(55, 65, 81, 0.6);
+      backdrop-filter: blur(10px);
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-16">
+
+  <!-- Top App Bar -->
+  <header class="sticky top-0 z-50 bg-[#0e141f]/95 border-b border-gray-800 px-4 py-3 backdrop-blur flex justify-between items-center shadow-md">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">📈</div>
+      <div>
+        <h1 class="font-bold text-sm sm:text-base leading-tight text-white flex items-center gap-2">
+          B3 Swing Trade Pro
+          <span id="data-status-badge" class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded font-mono">B3 Oficial</span>
+        </h1>
+        <p id="header-update-time" class="text-[10px] text-gray-400">Carregando cotações oficiais...</p>
+      </div>
+    </div>
+    <button onclick="refreshData()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 active:scale-95 transition text-emerald-400 text-xs flex items-center gap-1.5 border border-gray-700">
+      <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      <span>Atualizar</span>
+    </button>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-4xl mx-auto px-3 sm:px-4 pt-3">
+
+    <!-- Asset Selector Pills -->
+    <div class="flex gap-2 overflow-x-auto pb-2 pt-1 hide-scrollbar">
+      <button onclick="selectTicker('ITUB4')" id="pill-ITUB4" class="ticker-pill px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-600 text-white shadow-sm border border-emerald-500 whitespace-nowrap">ITUB4 (Itaú)</button>
+      <button onclick="selectTicker('BBDC4')" id="pill-BBDC4" class="ticker-pill px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700 whitespace-nowrap">BBDC4 (Bradesco)</button>
+      <button onclick="selectTicker('BBAS3')" id="pill-BBAS3" class="ticker-pill px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700 whitespace-nowrap">BBAS3 (Banco do Brasil)</button>
+      <button onclick="selectTicker('PETR4')" id="pill-PETR4" class="ticker-pill px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700 whitespace-nowrap">PETR4 (Petrobras)</button>
+      <button onclick="selectTicker('VALE3')" id="pill-VALE3" class="ticker-pill px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700 whitespace-nowrap">VALE3 (Vale)</button>
+      <button onclick="selectTicker('WEGE3')" id="pill-WEGE3" class="ticker-pill px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700 whitespace-nowrap">WEGE3 (Weg)</button>
+    </div>
+
+    <!-- HERO SIGNAL CARD -->
+    <div class="card-glass rounded-xl p-4 mb-4 shadow-lg border border-gray-800">
+      <div class="flex justify-between items-start gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] text-gray-400 uppercase tracking-widest font-mono">Sinal Multifatorial</span>
+            <span id="live-tick-badge" class="hidden text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1 rounded font-bold">AO VIVO</span>
+          </div>
+          <div id="signal-badge" class="mt-1 inline-block px-3 py-1 rounded-lg text-sm sm:text-base font-extrabold bg-gray-800 text-gray-300 border border-gray-600">
+            CARREGANDO...
+          </div>
+          <div id="signal-ticker" class="text-xl sm:text-2xl font-black text-white mt-1.5">ITUB4</div>
+          <div id="asset-name" class="text-xs text-gray-400">Itaú Unibanco PN</div>
+        </div>
+
+        <div class="text-right">
+          <div class="text-[10px] text-gray-400 uppercase font-mono">Cotação Real (B3)</div>
+          <div id="current-price" class="text-2xl sm:text-3xl font-extrabold text-white mt-1">R$ --,--</div>
+          <div id="price-change" class="text-xs font-semibold text-gray-400 mt-0.5">--% hoje</div>
+          <div id="day-range" class="text-[10px] text-gray-500 mt-1 font-mono">Mín: R$ -- | Máx: R$ --</div>
+        </div>
+      </div>
+
+      <!-- Multifactor Score Meter -->
+      <div class="mt-4 pt-3 border-t border-gray-800/80">
+        <div class="flex justify-between text-xs text-gray-300 mb-1">
+          <span>Convicção Técnica Ponderada:</span>
+          <span id="score-text" class="font-bold text-gray-300">-- / 100</span>
+        </div>
+        <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden flex">
+          <div id="score-bar" class="h-full bg-gray-500 transition-all duration-700" style="width: 50%;"></div>
+        </div>
+        <p id="score-summary" class="text-xs text-gray-400 mt-2 italic">Aguardando dados oficiais da B3...</p>
+      </div>
+    </div>
+
+    <!-- TECHNICAL EXECUTION METRICS (GRID) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+      <div class="card-glass p-3 rounded-lg border border-gray-800">
+        <div class="text-[10px] text-gray-400 uppercase font-mono">🎯 Entrada Sugerida</div>
+        <div id="metric-entry" class="text-base sm:text-lg font-bold text-cyan-400 mt-1">R$ --,--</div>
+        <div class="text-[10px] text-gray-500">Cotação de referência</div>
+      </div>
+
+      <div class="card-glass p-3 rounded-lg border border-red-950/40 bg-red-950/10">
+        <div class="text-[10px] text-red-400 uppercase font-mono">🛑 Stop Loss Técnico</div>
+        <div id="metric-stop" class="text-base sm:text-lg font-bold text-red-400 mt-1">R$ --,--</div>
+        <div id="metric-stop-pct" class="text-[10px] text-red-500">--% de risco máximo</div>
+      </div>
+
+      <div class="card-glass p-3 rounded-lg border border-emerald-950/40 bg-emerald-950/10">
+        <div class="text-[10px] text-emerald-400 uppercase font-mono">🥇 Alvo 1 (1:1.5)</div>
+        <div id="metric-target1" class="text-base sm:text-lg font-bold text-emerald-400 mt-1">R$ --,--</div>
+        <div id="metric-target1-pct" class="text-[10px] text-emerald-500">+--% (Breakeven)</div>
+      </div>
+
+      <div class="card-glass p-3 rounded-lg border border-emerald-950/40 bg-emerald-950/10">
+        <div class="text-[10px] text-emerald-300 uppercase font-mono">🏆 Alvo 2 (1:2.5)</div>
+        <div id="metric-target2" class="text-base sm:text-lg font-bold text-emerald-300 mt-1">R$ --,--</div>
+        <div id="metric-target2-pct" class="text-[10px] text-emerald-400">+--% final</div>
+      </div>
+    </div>
+
+    <!-- NAVIGATION TABS -->
+    <div class="flex border-b border-gray-800 mb-4 overflow-x-auto hide-scrollbar text-xs">
+      <button onclick="switchTab('chart')" id="tab-btn-chart" class="py-2 px-3 border-b-2 border-emerald-500 text-emerald-400 font-bold whitespace-nowrap">📊 Gráfico Técnico</button>
+      <button onclick="switchTab('simulator')" id="tab-btn-simulator" class="py-2 px-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 font-medium whitespace-nowrap">🎯 Simulador &amp; IR</button>
+      <button onclick="switchTab('scorecard')" id="tab-btn-scorecard" class="py-2 px-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 font-medium whitespace-nowrap">📑 Detalhamento Score</button>
+      <button onclick="switchTab('compare')" id="tab-btn-compare" class="py-2 px-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 font-medium whitespace-nowrap">⚖️ ITUB4 vs BBDC4</button>
+      <button onclick="switchTab('guide')" id="tab-btn-guide" class="py-2 px-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 font-medium whitespace-nowrap">📘 Guia B3 &amp; IR</button>
+    </div>
+
+    <!-- TAB 1: CHART -->
+    <div id="tab-content-chart" class="tab-pane">
+      <div class="card-glass p-3 rounded-xl border border-gray-800">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-bold text-gray-300">Histórico de Fechamento Oficial &amp; Médias Móveis</span>
+          <span class="text-[10px] text-emerald-400 font-mono">B3 • D1 Oficial</span>
+        </div>
+        <div class="w-full h-64 sm:h-80">
+          <canvas id="priceChart"></canvas>
+        </div>
+        <div class="flex justify-center gap-3 text-[10px] text-gray-400 mt-2 font-mono flex-wrap">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-cyan-400 inline-block"></span> Preço Real</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-amber-400 inline-block"></span> EMA 9</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-orange-500 inline-block"></span> EMA 21</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-red-500 inline-block"></span> Stop Loss</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-emerald-400 inline-block"></span> Alvo 1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SIMULATOR & IR -->
+    <div id="tab-content-simulator" class="tab-pane hidden">
+      <div class="card-glass p-4 rounded-xl border border-gray-800 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-300 mb-1">Capital Pretendido para a Operação (R$):</label>
+          <div class="flex items-center gap-2">
+            <span class="text-gray-400 text-sm font-mono">R$</span>
+            <input type="number" id="sim-capital" value="6000" step="500" min="500" oninput="runSimulation()" class="bg-gray-900 border border-gray-800 text-white text-base rounded-lg px-3 py-2 w-full font-bold focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-800">
+          <div class="bg-gray-900/60 p-3 rounded-lg border border-gray-800">
+            <span class="text-[10px] text-gray-400 uppercase font-mono">Lote de Ações</span>
+            <div id="sim-shares" class="text-xl font-black text-cyan-400 mt-1">-- ações</div>
+            <div id="sim-invested" class="text-[11px] text-gray-500">Total: R$ --</div>
+          </div>
+          <div class="bg-red-950/20 p-3 rounded-lg border border-red-900/40">
+            <span class="text-[10px] text-red-400 uppercase font-mono">Perda Máxima (Stop)</span>
+            <div id="sim-loss" class="text-xl font-black text-red-400 mt-1">- R$ --</div>
+            <div id="sim-loss-pct" class="text-[11px] text-red-500">--% do capital</div>
+          </div>
+          <div class="bg-emerald-950/20 p-3 rounded-lg border border-emerald-900/40">
+            <span class="text-[10px] text-emerald-400 uppercase font-mono">Lucro Alvo 1</span>
+            <div id="sim-gain1" class="text-xl font-black text-emerald-400 mt-1">+ R$ --</div>
+            <div class="text-[11px] text-emerald-500">Realização parcial</div>
+          </div>
+          <div class="bg-emerald-950/20 p-3 rounded-lg border border-emerald-900/40">
+            <span class="text-[10px] text-emerald-300 uppercase font-mono">Lucro Alvo 2 (Final)</span>
+            <div id="sim-gain2" class="text-xl font-black text-emerald-300 mt-1">+ R$ --</div>
+            <div class="text-[11px] text-emerald-400">Alvo projetado</div>
+          </div>
+        </div>
+
+        <!-- Tax Bar -->
+        <div class="pt-3 border-t border-gray-800">
+          <div class="flex justify-between text-xs mb-1">
+            <span class="font-bold text-gray-300">🛡️ Termômetro da Isenção de IR:</span>
+            <span id="sim-tax-status" class="font-mono text-emerald-400">0% de R$ 20.000</span>
+          </div>
+          <div class="w-full bg-gray-800 h-3 rounded-full overflow-hidden">
+            <div id="sim-tax-bar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 30%;"></div>
+          </div>
+          <p id="sim-tax-msg" class="text-xs text-emerald-400/90 mt-2">
+            ✅ Operação dentro do teto mensal de R$ 20.000. Venda 100% <strong>isenta de Imposto de Renda</strong> sobre o lucro!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SCORECARD -->
+    <div id="tab-content-scorecard" class="tab-pane hidden">
+      <div class="card-glass rounded-xl border border-gray-800 overflow-hidden">
+        <div class="p-3 bg-gray-900/80 border-b border-gray-800">
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider">Critérios do Sistema Multifatorial</h3>
+          <p class="text-[11px] text-gray-400">Pontuação calculada com dados reais de fechamento e intraday</p>
+        </div>
+        <div id="scorecard-list" class="divide-y divide-gray-800 text-xs">
+          <!-- Preenchido dinamicamente via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: COMPARE -->
+    <div id="tab-content-compare" class="tab-pane hidden">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="card-glass p-4 rounded-xl border-t-4 border-t-amber-500 border-gray-800">
+          <div class="flex justify-between items-center mb-1">
+            <h4 class="font-extrabold text-white text-lg">ITUB4</h4>
+            <span class="text-xs text-amber-400 font-mono">Itaú Unibanco</span>
+          </div>
+          <div id="comp-itub-price" class="text-2xl font-black text-white">R$ --,--</div>
+          <div id="comp-itub-signal" class="mt-2 text-xs font-bold text-emerald-400">Sinal: --</div>
+          <div class="mt-3 text-xs space-y-1.5 text-gray-400 border-t border-gray-800 pt-2">
+            <div>🛑 Stop Técnico: <strong id="comp-itub-stop" class="text-red-400">R$ --</strong></div>
+            <div>🥇 Alvo 1: <strong id="comp-itub-t1" class="text-emerald-400">R$ --</strong></div>
+            <div>🏆 Alvo 2: <strong id="comp-itub-t2" class="text-emerald-300">R$ --</strong></div>
+          </div>
+        </div>
+
+        <div class="card-glass p-4 rounded-xl border-t-4 border-t-red-500 border-gray-800">
+          <div class="flex justify-between items-center mb-1">
+            <h4 class="font-extrabold text-white text-lg">BBDC4</h4>
+            <span class="text-xs text-red-400 font-mono">Banco Bradesco</span>
+          </div>
+          <div id="comp-bbdc-price" class="text-2xl font-black text-white">R$ --,--</div>
+          <div id="comp-bbdc-signal" class="mt-2 text-xs font-bold text-emerald-400">Sinal: --</div>
+          <div class="mt-3 text-xs space-y-1.5 text-gray-400 border-t border-gray-800 pt-2">
+            <div>🛑 Stop Técnico: <strong id="comp-bbdc-stop" class="text-red-400">R$ --</strong></div>
+            <div>🥇 Alvo 1: <strong id="comp-bbdc-t1" class="text-emerald-400">R$ --</strong></div>
+            <div>🏆 Alvo 2: <strong id="comp-bbdc-t2" class="text-emerald-300">R$ --</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: GUIDE -->
+    <div id="tab-content-guide" class="tab-pane hidden">
+      <div class="card-glass p-4 rounded-xl border border-gray-800 text-xs space-y-3 leading-relaxed text-gray-300">
+        <h3 class="text-sm font-bold text-emerald-400 mb-1">📘 Como Executar no Home Broker da Corretora:</h3>
+        <p>1. <strong>Ordem de Compra:</strong> Quando o sinal for <span class="text-emerald-400 font-bold">COMPRA FORTE</span> ou <span class="text-emerald-400 font-bold">COMPRA</span>, abra seu Home Broker (XP, Inter, BTG, Clear, Rico, etc.). Se for comprar lote padrão de 100, use o ticker (ex: <code>ITUB4</code>). Se for menos de 100 ações, use a letra F (ex: <code>ITUB4F</code>).</p>
+        <p>2. <strong>Ordem OCO (Stop Simultâneo):</strong> Utilize a boleta OCO. Preencha o <strong>Stop Loss</strong> com o valor sugerido na métrica e o <strong>Stop Gain</strong> com o valor do Alvo 1 ou 2.</p>
+        <p>3. <strong>Breakeven (Risco Zero):</strong> Quando atingir o Alvo 1, venda metade da posição e mova o Stop Loss da outra metade para o preço de entrada original.</p>
+        <hr class="border-gray-800 my-2">
+        <h3 class="text-sm font-bold text-emerald-400 mb-1">🛡️ Regra de Isenção do Imposto de Renda:</h3>
+        <p>• No <strong>Swing Trade em ações</strong>, vendas totais de até <strong>R$ 20.000,00 por mês</strong> são 100% isentas de imposto sobre ganho de capital (Art. 3º, Lei 11.033/2004).</p>
+        <p>• <em>Atenção:</em> Day Trade não possui isenção (qualquer lucro paga 20%). Apenas operações de Swing Trade (segurando ao menos de um dia para o outro) gozam do benefício.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC (100% REAL DATA ENGINE) -->
+  <script>
+    let currentTicker = 'ITUB4';
+    let marketDatabase = {"updated_at": "06/11/2026 11:37:55", "source": "B3 Oficial via Yahoo Finance (yfinance)", "assets": {"ITUB4": {"symbol": "ITUB4", "name": "ITAUUNIBANCOPN      N1", "current_price": 40.28, "previous_close": 39.97, "change_pct": 0.78, "high_day": 40.37, "low_day": 39.87, "volume_day": 1877200, "signal": "NEUTRO", "score": 12, "summary": "Mercado sem tendência clara ou sinais divergentes. Recomendável aguardar definição.", "factors": [{"category": "Macro (D1)", "factor": "SMA 200 Diária", "status": "Negativo", "points": -12, "desc": "Preço (R$ 40.28) abaixo da SMA 200 (R$ 42.56) - Abaixo da média de 200 dias"}, {"category": "Macro (D1)", "factor": "EMA 21 Diária", "status": "Negativo", "points": -12, "desc": "Preço abaixo da EMA 21 Diária (pressão vendedora no swing trade)"}, {"category": "Macro (D1)", "factor": "MACD Diário", "status": "Negativo", "points": -8, "desc": "Histograma MACD diário negativo (momentum macro desfavorável)"}, {"category": "Timing (60m)", "factor": "Cruzamento EMA 9/21", "status": "Positivo", "points": 14, "desc": "EMA 9 (R$ 39.87) acima da EMA 21 (R$ 39.65) no 60m - Alinhamento altista"}, {"category": "Timing (60m)", "factor": "IFR 14 (60m)", "status": "Positivo", "points": 8, "desc": "IFR 60m em 50.0 em zona saudável de tendência compradora, com espaço para alta"}, {"category": "Timing (60m)", "factor": "MACD Histograma 60m", "status": "Positivo", "points": 9, "desc": "MACD 60m com histograma positivo e expandindo (força compradora acelerando)"}, {"category": "Volume", "factor": "Volume 60m vs Média 20", "status": "Neutro", "points": 2, "desc": "Volume no 60m (0.17x da média) dentro da normalidade"}, {"category": "Volume", "factor": "OBV Diário (Acumulação)", "status": "Positivo", "points": 6, "desc": "OBV no Diário em tendência ascendente nos últimos dias (Acumulação)"}, {"category": "Volatilidade", "factor": "Bandas de Bollinger (60m)", "status": "Positivo", "points": 5, "desc": "Preço acima da média central de Bollinger no 60m (região compradora)"}], "risk": {"entry_price": 40.28, "stop_loss": 38.66, "risk_per_share": 1.62, "risk_pct": 4.03, "target_1": 42.72, "target_1_gain_pct": 6.05, "target_1_ratio": "1:1.5", "target_2": 44.34, "target_2_gain_pct": 10.08, "target_2_ratio": "1:2.5", "atr_daily": 1.37, "recent_swing_low": 38.85}, "history": [{"date": "24/09", "open": 42.51, "high": 42.61, "low": 41.82, "close": 41.83, "volume": 14855800, "ema9": 42.34, "ema21": 41.79}, {"date": "25/09", "open": 41.81, "high": 42.39, "low": 41.68, "close": 42.09, "volume": 16444600, "ema9": 42.29, "ema21": 41.81}, {"date": "28/09", "open": 41.8, "high": 42.1, "low": 41.49, "close": 41.67, "volume": 18089200, "ema9": 42.17, "ema21": 41.8}, {"date": "29/09", "open": 41.67, "high": 42.32, "low": 41.47, "close": 42.26, "volume": 17690800, "ema9": 42.19, "ema21": 41.84}, {"date": "30/09", "open": 43.13, "high": 44.63, "low": 42.67, "close": 44.24, "volume": 73883700, "ema9": 42.6, "ema21": 42.06}, {"date": "01/10", "open": 44.33, "high": 44.61, "low": 43.39, "close": 44.12, "volume": 58873000, "ema9": 42.9, "ema21": 42.25}, {"date": "02/10", "open": 45.23, "high": 45.25, "low": 43.08, "close": 44.81, "volume": 44876100, "ema9": 43.28, "ema21": 42.48}, {"date": "05/10", "open": 48.78, "high": 50.66, "low": 48.06, "close": 49.46, "volume": 105387700, "ema9": 44.52, "ema21": 43.12}, {"date": "06/10", "open": 49.93, "high": 50.83, "low": 49.71, "close": 50.43, "volume": 58027100, "ema9": 45.7, "ema21": 43.78}, {"date": "07/10", "open": 50.28, "high": 50.77, "low": 48.9, "close": 49.09, "volume": 46569000, "ema9": 46.38, "ema21": 44.26}, {"date": "08/10", "open": 48.98, "high": 49.83, "low": 48.23, "close": 49.33, "volume": 40125700, "ema9": 46.97, "ema21": 44.72}, {"date": "09/10", "open": 49.74, "high": 50.76, "low": 49.46, "close": 50.45, "volume": 46994400, "ema9": 47.66, "ema21": 45.24}, {"date": "13/10", "open": 49.67, "high": 49.98, "low": 49.31, "close": 49.66, "volume": 29067200, "ema9": 48.06, "ema21": 45.64}, {"date": "14/10", "open": 49.27, "high": 49.35, "low": 48.12, "close": 48.96, "volume": 31190400, "ema9": 48.24, "ema21": 45.95}, {"date": "15/10", "open": 48.39, "high": 49.13, "low": 47.79, "close": 48.33, "volume": 29353100, "ema9": 48.26, "ema21": 46.16}, {"date": "16/10", "open": 48.59, "high": 48.78, "low": 47.71, "close": 48.07, "volume": 21765700, "ema9": 48.22, "ema21": 46.34}, {"date": "19/10", "open": 48.28, "high": 48.73, "low": 47.69, "close": 47.88, "volume": 23461000, "ema9": 48.15, "ema21": 46.48}, {"date": "20/10", "open": 48.62, "high": 49.3, "low": 48.14, "close": 48.78, "volume": 27281100, "ema9": 48.28, "ema21": 46.68}, {"date": "21/10", "open": 49.0, "high": 49.41, "low": 48.58, "close": 48.88, "volume": 29774400, "ema9": 48.4, "ema21": 46.88}, {"date": "22/10", "open": 48.48, "high": 48.84, "low": 47.87, "close": 47.98, "volume": 25554000, "ema9": 48.31, "ema21": 46.98}, {"date": "23/10", "open": 48.06, "high": 48.57, "low": 47.51, "close": 48.28, "volume": 28073700, "ema9": 48.31, "ema21": 47.1}, {"date": "26/10", "open": 41.98, "high": 42.13, "low": 39.66, "close": 41.68, "volume": 147395600, "ema9": 46.98, "ema21": 46.61}, {"date": "27/10", "open": 42.03, "high": 42.58, "low": 41.06, "close": 41.17, "volume": 51885900, "ema9": 45.82, "ema21": 46.11}, {"date": "28/10", "open": 41.18, "high": 41.26, "low": 39.36, "close": 39.76, "volume": 50983200, "ema9": 44.61, "ema21": 45.54}, {"date": "29/10", "open": 39.98, "high": 40.07, "low": 39.38, "close": 39.52, "volume": 40030500, "ema9": 43.59, "ema21": 44.99}, {"date": "30/10", "open": 39.18, "high": 39.32, "low": 38.67, "close": 38.67, "volume": 51157200, "ema9": 42.61, "ema21": 44.42}, {"date": "03/11", "open": 38.47, "high": 38.77, "low": 38.11, "close": 38.49, "volume": 43485400, "ema9": 41.78, "ema21": 43.88}, {"date": "04/11", "open": 39.3, "high": 39.9, "low": 38.85, "close": 39.71, "volume": 47053600, "ema9": 41.37, "ema21": 43.5}, {"date": "05/11", "open": 39.71, "high": 40.17, "low": 39.33, "close": 39.97, "volume": 32694800, "ema9": 41.09, "ema21": 43.18}, {"date": "06/11", "open": 39.98, "high": 40.37, "low": 39.87, "close": 40.28, "volume": 1877200, "ema9": 40.93, "ema21": 42.91}]}, "BBDC4": {"symbol": "BBDC4", "name": "BRADESCO    PN      N1", "current_price": 14.07, "previous_close": 13.77, "change_pct": 2.18, "high_day": 14.12, "low_day": 13.74, "volume_day": 5201300, "signal": "VENDA / REALIZAR", "score": -28, "summary": "Sinal de fraqueza técnica: Momento propício para realizar lucros ou apertar stops protetivos.", "factors": [{"category": "Macro (D1)", "factor": "SMA 200 Diária", "status": "Negativo", "points": -12, "desc": "Preço (R$ 14.07) abaixo da SMA 200 (R$ 18.06) - Abaixo da média de 200 dias"}, {"category": "Macro (D1)", "factor": "EMA 21 Diária", "status": "Negativo", "points": -12, "desc": "Preço abaixo da EMA 21 Diária (pressão vendedora no swing trade)"}, {"category": "Macro (D1)", "factor": "MACD Diário", "status": "Negativo", "points": -8, "desc": "Histograma MACD diário negativo (momentum macro desfavorável)"}, {"category": "Timing (60m)", "factor": "Cruzamento EMA 9/21", "status": "Negativo", "points": -14, "desc": "EMA 9 abaixo da EMA 21 no 60m - Alinhamento baixista no timing de entrada"}, {"category": "Timing (60m)", "factor": "IFR 14 (60m)", "status": "Positivo", "points": 8, "desc": "IFR 60m em 50.0 em zona saudável de tendência compradora, com espaço para alta"}, {"category": "Timing (60m)", "factor": "MACD Histograma 60m", "status": "Positivo", "points": 9, "desc": "MACD 60m com histograma positivo e expandindo (força compradora acelerando)"}, {"category": "Volume", "factor": "Volume 60m vs Média 20", "status": "Neutro", "points": 2, "desc": "Volume no 60m (0.26x da média) dentro da normalidade"}, {"category": "Volume", "factor": "OBV Diário (Acumulação)", "status": "Negativo", "points": -6, "desc": "OBV no Diário em tendência descendente nos últimos dias (Distribuição)"}, {"category": "Volatilidade", "factor": "Bandas de Bollinger (60m)", "status": "Positivo", "points": 5, "desc": "Preço acima da média central de Bollinger no 60m (região compradora)"}], "risk": {"entry_price": 14.07, "stop_loss": 13.65, "risk_per_share": 0.42, "risk_pct": 2.98, "target_1": 14.7, "target_1_gain_pct": 4.46, "target_1_ratio": "1:1.5", "target_2": 15.12, "target_2_gain_pct": 7.44, "target_2_ratio": "1:2.5", "atr_daily": 0.8, "recent_swing_low": 13.72}, "history": [{"date": "24/09", "open": 17.74, "high": 17.76, "low": 17.32, "close": 17.44, "volume": 34713200, "ema9": 17.72, "ema21": 17.54}, {"date": "25/09", "open": 17.4, "high": 17.61, "low": 17.31, "close": 17.54, "volume": 21337600, "ema9": 17.68, "ema21": 17.54}, {"date": "28/09", "open": 17.48, "high": 17.54, "low": 17.21, "close": 17.32, "volume": 28163100, "ema9": 17.61, "ema21": 17.52}, {"date": "29/09", "open": 17.29, "high": 17.44, "low": 17.16, "close": 17.44, "volume": 41812200, "ema9": 17.58, "ema21": 17.51}, {"date": "30/09", "open": 17.8, "high": 18.19, "low": 17.63, "close": 18.16, "volume": 60176500, "ema9": 17.69, "ema21": 17.57}, {"date": "01/10", "open": 17.8, "high": 18.36, "low": 17.63, "close": 18.18, "volume": 96438800, "ema9": 17.79, "ema21": 17.62}, {"date": "02/10", "open": 18.6, "high": 18.91, "low": 17.86, "close": 18.88, "volume": 109085500, "ema9": 18.01, "ema21": 17.74}, {"date": "05/10", "open": 20.39, "high": 21.74, "low": 20.39, "close": 21.45, "volume": 160447100, "ema9": 18.7, "ema21": 18.08}, {"date": "06/10", "open": 21.86, "high": 22.59, "low": 21.74, "close": 22.39, "volume": 117290100, "ema9": 19.43, "ema21": 18.47}, {"date": "07/10", "open": 22.36, "high": 22.4, "low": 21.52, "close": 21.56, "volume": 119596100, "ema9": 19.86, "ema21": 18.75}, {"date": "08/10", "open": 21.51, "high": 21.66, "low": 21.02, "close": 21.12, "volume": 88239200, "ema9": 20.11, "ema21": 18.97}, {"date": "09/10", "open": 21.31, "high": 21.43, "low": 20.93, "close": 21.22, "volume": 77677000, "ema9": 20.33, "ema21": 19.17}, {"date": "13/10", "open": 21.06, "high": 21.1, "low": 20.73, "close": 21.01, "volume": 65583200, "ema9": 20.47, "ema21": 19.34}, {"date": "14/10", "open": 20.83, "high": 20.98, "low": 20.45, "close": 20.84, "volume": 48274900, "ema9": 20.54, "ema21": 19.47}, {"date": "15/10", "open": 20.51, "high": 20.99, "low": 20.34, "close": 20.7, "volume": 42457600, "ema9": 20.58, "ema21": 19.59}, {"date": "16/10", "open": 20.79, "high": 20.8, "low": 20.2, "close": 20.33, "volume": 42935900, "ema9": 20.53, "ema21": 19.65}, {"date": "19/10", "open": 20.51, "high": 20.57, "low": 19.99, "close": 20.07, "volume": 40068500, "ema9": 20.44, "ema21": 19.69}, {"date": "20/10", "open": 20.33, "high": 20.87, "low": 20.29, "close": 20.65, "volume": 39315600, "ema9": 20.48, "ema21": 19.78}, {"date": "21/10", "open": 20.77, "high": 20.93, "low": 20.5, "close": 20.62, "volume": 40831000, "ema9": 20.51, "ema21": 19.86}, {"date": "22/10", "open": 20.47, "high": 20.57, "low": 20.13, "close": 20.19, "volume": 43733400, "ema9": 20.44, "ema21": 19.89}, {"date": "23/10", "open": 19.96, "high": 20.51, "low": 19.61, "close": 20.34, "volume": 96458300, "ema9": 20.42, "ema21": 19.93}, {"date": "26/10", "open": 15.01, "high": 16.05, "low": 14.58, "close": 15.93, "volume": 257914400, "ema9": 19.52, "ema21": 19.56}, {"date": "27/10", "open": 16.14, "high": 16.28, "low": 15.62, "close": 15.71, "volume": 131002200, "ema9": 18.76, "ema21": 19.21}, {"date": "28/10", "open": 15.58, "high": 15.58, "low": 14.66, "close": 14.66, "volume": 136703400, "ema9": 17.94, "ema21": 18.8}, {"date": "29/10", "open": 14.51, "high": 14.57, "low": 14.11, "close": 14.14, "volume": 105429400, "ema9": 17.18, "ema21": 18.38}, {"date": "30/10", "open": 13.98, "high": 14.16, "low": 13.79, "close": 13.84, "volume": 86702200, "ema9": 16.51, "ema21": 17.96}, {"date": "03/11", "open": 13.76, "high": 14.06, "low": 13.42, "close": 13.56, "volume": 104015400, "ema9": 15.92, "ema21": 17.56}, {"date": "04/11", "open": 13.78, "high": 14.12, "low": 13.73, "close": 14.06, "volume": 78159800, "ema9": 15.55, "ema21": 17.24}, {"date": "05/11", "open": 14.06, "high": 14.15, "low": 13.73, "close": 13.77, "volume": 74851900, "ema9": 15.19, "ema21": 16.93}, {"date": "06/11", "open": 13.82, "high": 14.12, "low": 13.74, "close": 14.07, "volume": 5201300, "ema9": 14.97, "ema21": 16.67}]}, "BBAS3": {"symbol": "BBAS3", "name": "BRASIL      ON      NM", "current_price": 16.86, "previous_close": 16.49, "change_pct": 2.24, "high_day": 16.9, "low_day": 16.43, "volume_day": 4346400, "signal": "NEUTRO", "score": -11, "summary": "Mercado sem tendência clara ou sinais divergentes. Recomendável aguardar definição.", "factors": [{"category": "Macro (D1)", "factor": "SMA 200 Diária", "status": "Negativo", "points": -12, "desc": "Preço (R$ 16.86) abaixo da SMA 200 (R$ 21.84) - Abaixo da média de 200 dias"}, {"category": "Macro (D1)", "factor": "EMA 21 Diária", "status": "Negativo", "points": -12, "desc": "Preço abaixo da EMA 21 Diária (pressão vendedora no swing trade)"}, {"category": "Macro (D1)", "factor": "MACD Diário", "status": "Negativo", "points": -8, "desc": "Histograma MACD diário negativo (momentum macro desfavorável)"}, {"category": "Timing (60m)", "factor": "Cruzamento EMA 9/21", "status": "Positivo", "points": 14, "desc": "EMA 9 (R$ 16.56) acima da EMA 21 (R$ 16.54) no 60m - Alinhamento altista"}, {"category": "Timing (60m)", "factor": "IFR 14 (60m)", "status": "Positivo", "points": 8, "desc": "IFR 60m em 50.0 em zona saudável de tendência compradora, com espaço para alta"}, {"category": "Timing (60m)", "factor": "MACD Histograma 60m", "status": "Positivo", "points": 9, "desc": "MACD 60m com histograma positivo e expandindo (força compradora acelerando)"}, {"category": "Volume", "factor": "Volume 60m vs Média 20", "status": "Neutro", "points": 2, "desc": "Volume no 60m (0.48x da média) dentro da normalidade"}, {"category": "Volume", "factor": "OBV Diário (Acumulação)", "status": "Negativo", "points": -6, "desc": "OBV no Diário em tendência descendente nos últimos dias (Distribuição)"}, {"category": "Volatilidade", "factor": "Bandas de Bollinger (60m)", "status": "Negativo", "points": -6, "desc": "Preço esticado acima da Banda de Bollinger Superior (risco de retorno à média)"}], "risk": {"entry_price": 16.86, "stop_loss": 16.15, "risk_per_share": 0.71, "risk_pct": 4.22, "target_1": 17.93, "target_1_gain_pct": 6.33, "target_1_ratio": "1:1.5", "target_2": 18.64, "target_2_gain_pct": 10.54, "target_2_ratio": "1:2.5", "atr_daily": 0.94, "recent_swing_low": 16.23}, "history": [{"date": "24/09", "open": 22.17, "high": 22.24, "low": 21.48, "close": 21.54, "volume": 36947000, "ema9": 22.31, "ema21": 21.82}, {"date": "25/09", "open": 21.54, "high": 21.77, "low": 21.27, "close": 21.59, "volume": 43246900, "ema9": 22.16, "ema21": 21.8}, {"date": "28/09", "open": 21.39, "high": 21.81, "low": 21.18, "close": 21.49, "volume": 44554600, "ema9": 22.03, "ema21": 21.77}, {"date": "29/09", "open": 21.47, "high": 22.18, "low": 21.34, "close": 22.04, "volume": 37276500, "ema9": 22.03, "ema21": 21.8}, {"date": "30/09", "open": 22.5, "high": 23.07, "low": 22.23, "close": 23.07, "volume": 41551600, "ema9": 22.24, "ema21": 21.91}, {"date": "01/10", "open": 23.07, "high": 23.21, "low": 22.66, "close": 23.08, "volume": 44611100, "ema9": 22.41, "ema21": 22.02}, {"date": "02/10", "open": 23.36, "high": 23.78, "low": 22.96, "close": 23.72, "volume": 51578000, "ema9": 22.67, "ema21": 22.17}, {"date": "05/10", "open": 25.19, "high": 27.18, "low": 25.19, "close": 26.33, "volume": 147712300, "ema9": 23.4, "ema21": 22.55}, {"date": "06/10", "open": 26.15, "high": 26.29, "low": 24.37, "close": 24.64, "volume": 103512000, "ema9": 23.65, "ema21": 22.74}, {"date": "07/10", "open": 24.5, "high": 24.78, "low": 24.1, "close": 24.18, "volume": 57292200, "ema9": 23.76, "ema21": 22.87}, {"date": "08/10", "open": 24.14, "high": 24.65, "low": 23.93, "close": 24.26, "volume": 43856300, "ema9": 23.86, "ema21": 23.0}, {"date": "09/10", "open": 24.47, "high": 24.85, "low": 24.28, "close": 24.64, "volume": 38595900, "ema9": 24.01, "ema21": 23.15}, {"date": "13/10", "open": 24.51, "high": 24.69, "low": 24.12, "close": 24.25, "volume": 29035000, "ema9": 24.06, "ema21": 23.25}, {"date": "14/10", "open": 24.11, "high": 24.45, "low": 23.5, "close": 24.19, "volume": 46494500, "ema9": 24.09, "ema21": 23.33}, {"date": "15/10", "open": 23.75, "high": 24.15, "low": 23.53, "close": 23.76, "volume": 34443900, "ema9": 24.02, "ema21": 23.37}, {"date": "16/10", "open": 23.87, "high": 23.95, "low": 23.29, "close": 23.63, "volume": 44881400, "ema9": 23.94, "ema21": 23.4}, {"date": "19/10", "open": 23.86, "high": 24.34, "low": 23.79, "close": 23.95, "volume": 32715300, "ema9": 23.94, "ema21": 23.45}, {"date": "20/10", "open": 24.35, "high": 24.48, "low": 23.82, "close": 24.2, "volume": 40572800, "ema9": 24.0, "ema21": 23.52}, {"date": "21/10", "open": 24.29, "high": 24.57, "low": 23.98, "close": 24.1, "volume": 24659700, "ema9": 24.02, "ema21": 23.57}, {"date": "22/10", "open": 23.93, "high": 24.2, "low": 23.62, "close": 23.92, "volume": 28184600, "ema9": 24.0, "ema21": 23.6}, {"date": "23/10", "open": 23.95, "high": 24.97, "low": 23.69, "close": 24.72, "volume": 45784800, "ema9": 24.14, "ema21": 23.7}, {"date": "26/10", "open": 16.48, "high": 18.12, "low": 16.48, "close": 17.47, "volume": 286053400, "ema9": 22.81, "ema21": 23.14}, {"date": "27/10", "open": 18.0, "high": 18.31, "low": 17.35, "close": 17.38, "volume": 124506800, "ema9": 21.72, "ema21": 22.61}, {"date": "28/10", "open": 17.58, "high": 17.58, "low": 16.76, "close": 16.79, "volume": 87724800, "ema9": 20.74, "ema21": 22.08}, {"date": "29/10", "open": 16.86, "high": 16.94, "low": 16.34, "close": 16.46, "volume": 70352700, "ema9": 19.88, "ema21": 21.57}, {"date": "30/10", "open": 16.36, "high": 16.75, "low": 16.13, "close": 16.47, "volume": 61343200, "ema9": 19.2, "ema21": 21.11}, {"date": "03/11", "open": 16.4, "high": 16.52, "low": 16.08, "close": 16.19, "volume": 43694900, "ema9": 18.6, "ema21": 20.66}, {"date": "04/11", "open": 16.36, "high": 16.58, "low": 16.23, "close": 16.49, "volume": 32343700, "ema9": 18.18, "ema21": 20.28}, {"date": "05/11", "open": 16.51, "high": 16.71, "low": 16.34, "close": 16.49, "volume": 33652700, "ema9": 17.84, "ema21": 19.94}, {"date": "06/11", "open": 16.5, "high": 16.9, "low": 16.43, "close": 16.86, "volume": 4346400, "ema9": 17.64, "ema21": 19.66}]}, "PETR4": {"symbol": "PETR4", "name": "PETROBRAS   PN      N2", "current_price": 45.53, "previous_close": 45.95, "change_pct": -0.91, "high_day": 46.11, "low_day": 45.5, "volume_day": 6192300, "signal": "VENDA / REALIZAR", "score": -36, "summary": "Sinal de fraqueza técnica: Momento propício para realizar lucros ou apertar stops protetivos.", "factors": [{"category": "Macro (D1)", "factor": "SMA 200 Diária", "status": "Positivo", "points": 12, "desc": "Preço (R$ 45.53) acima da SMA 200 (R$ 43.02) - Viés de Alta no Diário"}, {"category": "Macro (D1)", "factor": "EMA 21 Diária", "status": "Negativo", "points": -12, "desc": "Preço abaixo da EMA 21 Diária (pressão vendedora no swing trade)"}, {"category": "Macro (D1)", "factor": "MACD Diário", "status": "Negativo", "points": -8, "desc": "Histograma MACD diário negativo (momentum macro desfavorável)"}, {"category": "Timing (60m)", "factor": "Cruzamento EMA 9/21", "status": "Negativo", "points": -14, "desc": "EMA 9 abaixo da EMA 21 no 60m - Alinhamento baixista no timing de entrada"}, {"category": "Timing (60m)", "factor": "IFR 14 (60m)", "status": "Positivo", "points": 8, "desc": "IFR 60m em 50.0 em zona saudável de tendência compradora, com espaço para alta"}, {"category": "Timing (60m)", "factor": "MACD Histograma 60m", "status": "Negativo", "points": -9, "desc": "MACD 60m com histograma negativo e acelerando para baixo"}, {"category": "Volume", "factor": "Volume 60m vs Média 20", "status": "Neutro", "points": -2, "desc": "Volume no 60m (0.43x da média) dentro da normalidade"}, {"category": "Volume", "factor": "OBV Diário (Acumulação)", "status": "Negativo", "points": -6, "desc": "OBV no Diário em tendência descendente nos últimos dias (Distribuição)"}, {"category": "Volatilidade", "factor": "Bandas de Bollinger (60m)", "status": "Negativo", "points": -5, "desc": "Preço abaixo da média central de Bollinger no 60m"}], "risk": {"entry_price": 45.53, "stop_loss": 44.85, "risk_per_share": 0.68, "risk_pct": 1.5, "target_1": 46.55, "target_1_gain_pct": 2.25, "target_1_ratio": "1:1.5", "target_2": 47.24, "target_2_gain_pct": 3.75, "target_2_ratio": "1:2.5", "atr_daily": 2.13, "recent_swing_low": 45.5}, "history": [{"date": "24/09", "open": 49.7, "high": 50.24, "low": 49.19, "close": 49.26, "volume": 34675400, "ema9": 48.72, "ema21": 47.35}, {"date": "25/09", "open": 48.8, "high": 48.87, "low": 47.92, "close": 48.07, "volume": 34445400, "ema9": 48.59, "ema21": 47.41}, {"date": "28/09", "open": 48.56, "high": 49.27, "low": 48.28, "close": 48.72, "volume": 46903600, "ema9": 48.62, "ema21": 47.53}, {"date": "29/09", "open": 48.12, "high": 49.1, "low": 47.89, "close": 49.1, "volume": 24110900, "ema9": 48.71, "ema21": 47.68}, {"date": "30/09", "open": 49.8, "high": 50.03, "low": 49.12, "close": 49.12, "volume": 31859600, "ema9": 48.8, "ema21": 47.81}, {"date": "01/10", "open": 49.66, "high": 50.03, "low": 49.13, "close": 49.9, "volume": 34127800, "ema9": 49.02, "ema21": 48.0}, {"date": "02/10", "open": 49.74, "high": 51.35, "low": 49.4, "close": 51.17, "volume": 57295600, "ema9": 49.45, "ema21": 48.29}, {"date": "05/10", "open": 53.16, "high": 56.75, "low": 53.0, "close": 55.36, "volume": 122874900, "ema9": 50.63, "ema21": 48.93}, {"date": "06/10", "open": 54.69, "high": 55.13, "low": 53.78, "close": 53.82, "volume": 57647700, "ema9": 51.27, "ema21": 49.37}, {"date": "07/10", "open": 54.03, "high": 54.8, "low": 53.55, "close": 54.33, "volume": 51879700, "ema9": 51.88, "ema21": 49.82}, {"date": "08/10", "open": 55.3, "high": 55.96, "low": 54.73, "close": 55.48, "volume": 51578400, "ema9": 52.6, "ema21": 50.34}, {"date": "09/10", "open": 55.45, "high": 56.8, "low": 55.1, "close": 56.0, "volume": 49809400, "ema9": 53.28, "ema21": 50.85}, {"date": "13/10", "open": 55.65, "high": 56.88, "low": 55.58, "close": 56.85, "volume": 38257100, "ema9": 53.99, "ema21": 51.4}, {"date": "14/10", "open": 56.88, "high": 58.11, "low": 56.74, "close": 58.11, "volume": 42367600, "ema9": 54.82, "ema21": 52.01}, {"date": "15/10", "open": 57.6, "high": 58.09, "low": 57.09, "close": 57.36, "volume": 37576500, "ema9": 55.33, "ema21": 52.49}, {"date": "16/10", "open": 57.66, "high": 59.68, "low": 57.53, "close": 59.68, "volume": 56657800, "ema9": 56.2, "ema21": 53.15}, {"date": "19/10", "open": 59.3, "high": 59.3, "low": 57.95, "close": 58.0, "volume": 35174800, "ema9": 56.56, "ema21": 53.59}, {"date": "20/10", "open": 58.82, "high": 59.1, "low": 56.91, "close": 58.21, "volume": 42491900, "ema9": 56.89, "ema21": 54.01}, {"date": "21/10", "open": 58.21, "high": 58.68, "low": 57.75, "close": 57.75, "volume": 37151500, "ema9": 57.06, "ema21": 54.35}, {"date": "22/10", "open": 58.39, "high": 58.6, "low": 57.01, "close": 57.83, "volume": 39860200, "ema9": 57.21, "ema21": 54.67}, {"date": "23/10", "open": 58.1, "high": 59.79, "low": 58.01, "close": 58.68, "volume": 58347500, "ema9": 57.51, "ema21": 55.03}, {"date": "26/10", "open": 51.2, "high": 54.23, "low": 51.17, "close": 53.88, "volume": 141338400, "ema9": 56.78, "ema21": 54.93}, {"date": "27/10", "open": 53.6, "high": 53.7, "low": 52.66, "close": 52.79, "volume": 80592800, "ema9": 55.98, "ema21": 54.73}, {"date": "28/10", "open": 53.17, "high": 53.21, "low": 52.22, "close": 52.51, "volume": 56654300, "ema9": 55.29, "ema21": 54.53}, {"date": "29/10", "open": 52.05, "high": 53.03, "low": 51.75, "close": 52.2, "volume": 51969000, "ema9": 54.67, "ema21": 54.32}, {"date": "30/10", "open": 52.45, "high": 53.66, "low": 52.36, "close": 52.71, "volume": 61743200, "ema9": 54.28, "ema21": 54.17}, {"date": "03/11", "open": 51.2, "high": 51.21, "low": 49.15, "close": 50.71, "volume": 93496300, "ema9": 53.57, "ema21": 53.86}, {"date": "04/11", "open": 50.04, "high": 50.31, "low": 46.64, "close": 47.12, "volume": 94219800, "ema9": 52.28, "ema21": 53.24}, {"date": "05/11", "open": 47.9, "high": 48.04, "low": 45.95, "close": 45.95, "volume": 53109700, "ema9": 51.01, "ema21": 52.58}, {"date": "06/11", "open": 46.0, "high": 46.11, "low": 45.5, "close": 45.53, "volume": 6192300, "ema9": 49.91, "ema21": 51.94}]}, "VALE3": {"symbol": "VALE3", "name": "VALE        ON      NM", "current_price": 62.4, "previous_close": 62.67, "change_pct": -0.43, "high_day": 62.96, "low_day": 62.02, "volume_day": 2188900, "signal": "NEUTRO", "score": 19, "summary": "Mercado sem tendência clara ou sinais divergentes. Recomendável aguardar definição.", "factors": [{"category": "Macro (D1)", "factor": "SMA 200 Diária", "status": "Negativo", "points": -12, "desc": "Preço (R$ 62.40) abaixo da SMA 200 (R$ 76.55) - Abaixo da média de 200 dias"}, {"category": "Macro (D1)", "factor": "EMA 21 Diária", "status": "Negativo", "points": -12, "desc": "Preço abaixo da EMA 21 Diária (pressão vendedora no swing trade)"}, {"category": "Macro (D1)", "factor": "MACD Diário", "status": "Positivo", "points": 8, "desc": "Histograma MACD diário positivo (compradores no controle macro)"}, {"category": "Timing (60m)", "factor": "Cruzamento EMA 9/21", "status": "Positivo", "points": 14, "desc": "EMA 9 (R$ 62.57) acima da EMA 21 (R$ 62.31) no 60m - Alinhamento altista"}, {"category": "Timing (60m)", "factor": "IFR 14 (60m)", "status": "Positivo", "points": 8, "desc": "IFR 60m em 50.0 em zona saudável de tendência compradora, com espaço para alta"}, {"category": "Timing (60m)", "factor": "MACD Histograma 60m", "status": "Neutro", "points": 0, "desc": "MACD 60m sem aceleração definida no momento"}, {"category": "Volume", "factor": "Volume 60m vs Média 20", "status": "Neutro", "points": 2, "desc": "Volume no 60m (0.29x da média) dentro da normalidade"}, {"category": "Volume", "factor": "OBV Diário (Acumulação)", "status": "Positivo", "points": 6, "desc": "OBV no Diário em tendência ascendente nos últimos dias (Acumulação)"}, {"category": "Volatilidade", "factor": "Bandas de Bollinger (60m)", "status": "Positivo", "points": 5, "desc": "Preço acima da média central de Bollinger no 60m (região compradora)"}], "risk": {"entry_price": 62.4, "stop_loss": 60.99, "risk_per_share": 1.41, "risk_pct": 2.25, "target_1": 64.51, "target_1_gain_pct": 3.38, "target_1_ratio": "1:1.5", "target_2": 65.92, "target_2_gain_pct": 5.64, "target_2_ratio": "1:2.5", "atr_daily": 2.0, "recent_swing_low": 61.3}, "history": [{"date": "24/09", "open": 71.52, "high": 71.86, "low": 70.51, "close": 70.66, "volume": 14430100, "ema9": 73.22, "ema21": 74.68}, {"date": "25/09", "open": 70.68, "high": 71.2, "low": 69.94, "close": 70.77, "volume": 11387000, "ema9": 72.73, "ema21": 74.32}, {"date": "28/09", "open": 70.28, "high": 71.44, "low": 69.8, "close": 71.16, "volume": 14403900, "ema9": 72.42, "ema21": 74.03}, {"date": "29/09", "open": 70.99, "high": 71.59, "low": 69.29, "close": 69.61, "volume": 29094800, "ema9": 71.86, "ema21": 73.63}, {"date": "30/09", "open": 70.53, "high": 70.88, "low": 69.49, "close": 69.91, "volume": 23972000, "ema9": 71.47, "ema21": 73.29}, {"date": "01/10", "open": 69.57, "high": 70.4, "low": 68.67, "close": 70.38, "volume": 26580100, "ema9": 71.25, "ema21": 73.03}, {"date": "02/10", "open": 71.21, "high": 72.1, "low": 70.13, "close": 72.1, "volume": 32540400, "ema9": 71.42, "ema21": 72.94}, {"date": "05/10", "open": 73.38, "high": 74.27, "low": 69.52, "close": 71.4, "volume": 71273400, "ema9": 71.42, "ema21": 72.8}, {"date": "06/10", "open": 71.97, "high": 71.97, "low": 69.5, "close": 70.37, "volume": 30284200, "ema9": 71.21, "ema21": 72.58}, {"date": "07/10", "open": 69.9, "high": 69.9, "low": 68.13, "close": 68.75, "volume": 38890600, "ema9": 70.72, "ema21": 72.23}, {"date": "08/10", "open": 68.19, "high": 69.36, "low": 67.55, "close": 67.64, "volume": 38819200, "ema9": 70.1, "ema21": 71.82}, {"date": "09/10", "open": 68.16, "high": 68.31, "low": 67.11, "close": 67.9, "volume": 28304700, "ema9": 69.66, "ema21": 71.46}, {"date": "13/10", "open": 67.77, "high": 67.8, "low": 66.73, "close": 67.16, "volume": 22969900, "ema9": 69.16, "ema21": 71.07}, {"date": "14/10", "open": 66.95, "high": 66.95, "low": 66.01, "close": 66.72, "volume": 23988900, "ema9": 68.67, "ema21": 70.67}, {"date": "15/10", "open": 66.01, "high": 66.63, "low": 65.72, "close": 66.42, "volume": 22639200, "ema9": 68.22, "ema21": 70.29}, {"date": "16/10", "open": 66.72, "high": 67.37, "low": 65.87, "close": 66.21, "volume": 31270800, "ema9": 67.82, "ema21": 69.92}, {"date": "19/10", "open": 66.78, "high": 67.55, "low": 66.23, "close": 66.36, "volume": 15088100, "ema9": 67.53, "ema21": 69.59}, {"date": "20/10", "open": 65.99, "high": 66.49, "low": 65.41, "close": 65.44, "volume": 23095400, "ema9": 67.11, "ema21": 69.22}, {"date": "21/10", "open": 65.57, "high": 65.62, "low": 63.84, "close": 64.03, "volume": 28999500, "ema9": 66.49, "ema21": 68.74}, {"date": "22/10", "open": 63.52, "high": 63.52, "low": 61.4, "close": 61.49, "volume": 39849700, "ema9": 65.49, "ema21": 68.08}, {"date": "23/10", "open": 61.65, "high": 62.26, "low": 61.5, "close": 61.9, "volume": 26996200, "ema9": 64.77, "ema21": 67.52}, {"date": "26/10", "open": 67.97, "high": 67.99, "low": 64.16, "close": 64.38, "volume": 92311400, "ema9": 64.7, "ema21": 67.24}, {"date": "27/10", "open": 64.3, "high": 64.43, "low": 62.64, "close": 63.0, "volume": 43938600, "ema9": 64.36, "ema21": 66.85}, {"date": "28/10", "open": 62.79, "high": 62.9, "low": 60.86, "close": 61.38, "volume": 38289400, "ema9": 63.76, "ema21": 66.35}, {"date": "29/10", "open": 61.4, "high": 61.54, "low": 60.05, "close": 60.05, "volume": 23729500, "ema9": 63.02, "ema21": 65.78}, {"date": "30/10", "open": 59.44, "high": 62.98, "low": 59.42, "close": 62.02, "volume": 34856400, "ema9": 62.82, "ema21": 65.44}, {"date": "03/11", "open": 61.51, "high": 62.7, "low": 60.21, "close": 60.25, "volume": 21064100, "ema9": 62.31, "ema21": 64.97}, {"date": "04/11", "open": 61.6, "high": 62.89, "low": 61.23, "close": 62.35, "volume": 27244600, "ema9": 62.31, "ema21": 64.73}, {"date": "05/11", "open": 62.95, "high": 63.16, "low": 62.15, "close": 62.67, "volume": 23599400, "ema9": 62.39, "ema21": 64.54}, {"date": "06/11", "open": 62.6, "high": 62.96, "low": 62.02, "close": 62.4, "volume": 2188900, "ema9": 62.39, "ema21": 64.35}]}, "WEGE3": {"symbol": "WEGE3", "name": "WEG         ON      NM", "current_price": 47.62, "previous_close": 48.3, "change_pct": -1.41, "high_day": 48.33, "low_day": 47.5, "volume_day": 1032300, "signal": "NEUTRO", "score": -17, "summary": "Mercado sem tendência clara ou sinais divergentes. Recomendável aguardar definição.", "factors": [{"category": "Macro (D1)", "factor": "SMA 200 Diária", "status": "Negativo", "points": -12, "desc": "Preço (R$ 47.62) abaixo da SMA 200 (R$ 47.71) - Abaixo da média de 200 dias"}, {"category": "Macro (D1)", "factor": "EMA 21 Diária", "status": "Negativo", "points": -6, "desc": "Preço abaixo da EMA 21 Diária (pressão vendedora no swing trade)"}, {"category": "Macro (D1)", "factor": "MACD Diário", "status": "Positivo", "points": 8, "desc": "Histograma MACD diário positivo (compradores no controle macro)"}, {"category": "Timing (60m)", "factor": "Cruzamento EMA 9/21", "status": "Negativo", "points": -14, "desc": "EMA 9 abaixo da EMA 21 no 60m - Alinhamento baixista no timing de entrada"}, {"category": "Timing (60m)", "factor": "IFR 14 (60m)", "status": "Positivo", "points": 8, "desc": "IFR 60m em 50.0 em zona saudável de tendência compradora, com espaço para alta"}, {"category": "Timing (60m)", "factor": "MACD Histograma 60m", "status": "Neutro", "points": 0, "desc": "MACD 60m sem aceleração definida no momento"}, {"category": "Volume", "factor": "Volume 60m vs Média 20", "status": "Neutro", "points": -2, "desc": "Volume no 60m (0.22x da média) dentro da normalidade"}, {"category": "Volume", "factor": "OBV Diário (Acumulação)", "status": "Positivo", "points": 6, "desc": "OBV no Diário em tendência ascendente nos últimos dias (Acumulação)"}, {"category": "Volatilidade", "factor": "Bandas de Bollinger (60m)", "status": "Negativo", "points": -5, "desc": "Preço abaixo da média central de Bollinger no 60m"}], "risk": {"entry_price": 47.62, "stop_loss": 46.91, "risk_per_share": 0.71, "risk_pct": 1.5, "target_1": 48.69, "target_1_gain_pct": 2.25, "target_1_ratio": "1:1.5", "target_2": 49.41, "target_2_gain_pct": 3.75, "target_2_ratio": "1:2.5", "atr_daily": 1.99, "recent_swing_low": 47.5}, "history": [{"date": "24/09", "open": 51.0, "high": 51.32, "low": 50.08, "close": 50.74, "volume": 6455000, "ema9": 51.16, "ema21": 50.71}, {"date": "25/09", "open": 50.64, "high": 51.26, "low": 50.25, "close": 51.07, "volume": 6029900, "ema9": 51.14, "ema21": 50.74}, {"date": "28/09", "open": 50.67, "high": 51.36, "low": 50.05, "close": 50.12, "volume": 8194700, "ema9": 50.94, "ema21": 50.69}, {"date": "29/09", "open": 50.34, "high": 50.49, "low": 49.58, "close": 50.29, "volume": 13012200, "ema9": 50.81, "ema21": 50.65}, {"date": "30/09", "open": 50.79, "high": 51.11, "low": 49.25, "close": 49.46, "volume": 8926600, "ema9": 50.54, "ema21": 50.54}, {"date": "01/10", "open": 49.92, "high": 50.06, "low": 49.18, "close": 49.64, "volume": 10072700, "ema9": 50.36, "ema21": 50.46}, {"date": "02/10", "open": 50.39, "high": 51.53, "low": 49.83, "close": 51.45, "volume": 11748300, "ema9": 50.58, "ema21": 50.55}, {"date": "05/10", "open": 52.5, "high": 52.5, "low": 49.95, "close": 51.25, "volume": 22279300, "ema9": 50.71, "ema21": 50.61}, {"date": "06/10", "open": 51.68, "high": 51.74, "low": 50.67, "close": 50.75, "volume": 13060600, "ema9": 50.72, "ema21": 50.63}, {"date": "07/10", "open": 50.98, "high": 51.56, "low": 50.32, "close": 51.27, "volume": 11063400, "ema9": 50.83, "ema21": 50.68}, {"date": "08/10", "open": 51.25, "high": 52.71, "low": 50.66, "close": 51.77, "volume": 15603900, "ema9": 51.02, "ema21": 50.78}, {"date": "09/10", "open": 52.22, "high": 52.29, "low": 51.24, "close": 51.47, "volume": 8427100, "ema9": 51.11, "ema21": 50.85}, {"date": "13/10", "open": 51.2, "high": 52.05, "low": 50.78, "close": 50.81, "volume": 12803400, "ema9": 51.05, "ema21": 50.84}, {"date": "14/10", "open": 50.78, "high": 51.06, "low": 50.11, "close": 50.44, "volume": 11154100, "ema9": 50.93, "ema21": 50.81}, {"date": "15/10", "open": 49.93, "high": 50.39, "low": 49.09, "close": 49.09, "volume": 12896400, "ema9": 50.56, "ema21": 50.65}, {"date": "16/10", "open": 49.32, "high": 49.32, "low": 47.69, "close": 47.99, "volume": 9893600, "ema9": 50.05, "ema21": 50.41}, {"date": "19/10", "open": 48.14, "high": 48.44, "low": 47.37, "close": 47.67, "volume": 9013500, "ema9": 49.57, "ema21": 50.16}, {"date": "20/10", "open": 47.93, "high": 48.88, "low": 47.39, "close": 48.79, "volume": 14108700, "ema9": 49.41, "ema21": 50.03}, {"date": "21/10", "open": 47.55, "high": 48.04, "low": 45.12, "close": 45.21, "volume": 28130500, "ema9": 48.57, "ema21": 49.6}, {"date": "22/10", "open": 45.37, "high": 45.49, "low": 44.0, "close": 44.0, "volume": 18312200, "ema9": 47.66, "ema21": 49.09}, {"date": "23/10", "open": 44.37, "high": 44.47, "low": 42.73, "close": 42.73, "volume": 19565200, "ema9": 46.67, "ema21": 48.51}, {"date": "26/10", "open": 41.48, "high": 45.81, "low": 41.15, "close": 44.53, "volume": 37011400, "ema9": 46.24, "ema21": 48.15}, {"date": "27/10", "open": 45.06, "high": 47.08, "low": 45.06, "close": 46.16, "volume": 21786700, "ema9": 46.23, "ema21": 47.97}, {"date": "28/10", "open": 46.0, "high": 47.61, "low": 45.77, "close": 47.2, "volume": 22144400, "ema9": 46.42, "ema21": 47.9}, {"date": "29/10", "open": 47.86, "high": 49.93, "low": 46.97, "close": 49.28, "volume": 19328400, "ema9": 46.99, "ema21": 48.02}, {"date": "30/10", "open": 49.0, "high": 49.66, "low": 48.36, "close": 48.36, "volume": 16840900, "ema9": 47.27, "ema21": 48.05}, {"date": "03/11", "open": 47.27, "high": 49.85, "low": 47.17, "close": 49.17, "volume": 18519700, "ema9": 47.65, "ema21": 48.16}, {"date": "04/11", "open": 49.1, "high": 50.58, "low": 48.6, "close": 50.05, "volume": 19711600, "ema9": 48.13, "ema21": 48.33}, {"date": "05/11", "open": 49.67, "high": 49.93, "low": 47.65, "close": 48.3, "volume": 15541200, "ema9": 48.16, "ema21": 48.32}, {"date": "06/11", "open": 48.3, "high": 48.33, "low": 47.5, "close": 47.62, "volume": 1032300, "ema9": 48.05, "ema21": 48.26}]}}};
+    let chartInstance = null;
+
+    async function loadMarketDatabase() {
+      try {
+        const timestamp = new Date().getTime();
+        const resp = await fetch(`./market_data.json?t=${timestamp}`);
+        if (!resp.ok) throw new Error('Não foi possível carregar market_data.json');
+        marketDatabase = await resp.json();
+        
+        document.getElementById('header-update-time').innerText = `Atualizado em: ${marketDatabase.updated_at}`;
+        renderCurrentTicker();
+      } catch (err) {
+        console.error('Erro ao carregar dados oficiais:', err);
+        document.getElementById('score-summary').innerText = 'Erro ao carregar dados de cotação da B3. Tente atualizar a página.';
+      }
+    }
+
+    function selectTicker(ticker) {
+      currentTicker = ticker;
+      document.querySelectorAll('.ticker-pill').forEach(btn => {
+        btn.classList.remove('bg-emerald-600', 'text-white', 'border-emerald-500');
+        btn.classList.add('bg-gray-800', 'text-gray-300', 'border-gray-700');
+      });
+      const selectedBtn = document.getElementById(`pill-${ticker}`);
+      if (selectedBtn) {
+        selectedBtn.classList.remove('bg-gray-800', 'text-gray-300', 'border-gray-700');
+        selectedBtn.classList.add('bg-emerald-600', 'text-white', 'border-emerald-500');
+      }
+      renderCurrentTicker();
+      fetchLiveTick(ticker);
+    }
+
+    function renderCurrentTicker() {
+      if (!marketDatabase || !marketDatabase.assets || !marketDatabase.assets[currentTicker]) return;
+
+      const asset = marketDatabase.assets[currentTicker];
+      const risk = asset.risk;
+
+      document.getElementById('signal-ticker').innerText = asset.symbol;
+      document.getElementById('asset-name').innerText = asset.name;
+      document.getElementById('current-price').innerText = `R$ ${asset.current_price.toFixed(2)}`;
+
+      const changeEl = document.getElementById('price-change');
+      changeEl.innerText = `${asset.change_pct >= 0 ? '+' : ''}${asset.change_pct.toFixed(2)}% hoje`;
+      changeEl.className = `text-xs font-semibold mt-0.5 ${asset.change_pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+
+      document.getElementById('day-range').innerText = `Mín: R$ ${asset.low_day.toFixed(2)} | Máx: R$ ${asset.high_day.toFixed(2)}`;
+
+      // Sinal e Badge
+      const badge = document.getElementById('signal-badge');
+      badge.innerText = asset.signal;
+      let badgeStyle = 'bg-gray-800 text-gray-300 border-gray-600';
+      if (asset.signal === 'COMPRA FORTE') badgeStyle = 'bg-emerald-950 text-emerald-300 border-emerald-500';
+      else if (asset.signal === 'COMPRA') badgeStyle = 'bg-emerald-900/60 text-emerald-400 border-emerald-700';
+      else if (asset.signal === 'VENDA FORTE') badgeStyle = 'bg-red-950 text-red-300 border-red-500';
+      else if (asset.signal.includes('VENDA')) badgeStyle = 'bg-amber-950 text-amber-300 border-amber-600';
+      badge.className = `mt-1 inline-block px-3 py-1 rounded-lg text-sm sm:text-base font-extrabold border ${badgeStyle}`;
+
+      // Score
+      document.getElementById('score-text').innerText = `${asset.score >= 0 ? '+' : ''}${asset.score} / 100`;
+      const scorePct = Math.max(0, Math.min(100, (asset.score + 100) / 2));
+      const bar = document.getElementById('score-bar');
+      bar.style.width = `${scorePct}%`;
+      bar.className = `h-full transition-all duration-700 ${asset.score > 20 ? 'bg-emerald-500' : (asset.score < -20 ? 'bg-red-500' : 'bg-gray-400')}`;
+
+      document.getElementById('score-summary').innerText = asset.summary;
+
+      // Métricas de Risco
+      document.getElementById('metric-entry').innerText = `R$ ${risk.entry_price.toFixed(2)}`;
+      document.getElementById('metric-stop').innerText = `R$ ${risk.stop_loss.toFixed(2)}`;
+      document.getElementById('metric-stop-pct').innerText = `-${risk.risk_pct.toFixed(2)}% de risco`;
+
+      document.getElementById('metric-target1').innerText = `R$ ${risk.target_1.toFixed(2)}`;
+      document.getElementById('metric-target1-pct').innerText = `+${risk.target_1_gain_pct.toFixed(2)}% (Breakeven)`;
+
+      document.getElementById('metric-target2').innerText = `R$ ${risk.target_2.toFixed(2)}`;
+      document.getElementById('metric-target2-pct').innerText = `+${risk.target_2_gain_pct.toFixed(2)}% (Alvo Final)`;
+
+      // Scorecard List
+      const scorecardEl = document.getElementById('scorecard-list');
+      scorecardEl.innerHTML = (asset.factors || []).map(f => `
+        <div class="p-3 flex justify-between items-center gap-2">
+          <div>
+            <div class="font-bold text-gray-200 flex items-center gap-1.5">
+              <span>${f.status === 'Positivo' ? '🟢' : (f.status === 'Negativo' ? '🔴' : '⚪')}</span>
+              <span>[${f.category}] ${f.factor}</span>
+            </div>
+            <div class="text-[11px] text-gray-400 mt-0.5">${f.desc}</div>
+          </div>
+          <span class="font-mono font-bold ${f.status === 'Positivo' ? 'text-emerald-400' : (f.status === 'Negativo' ? 'text-red-400' : 'text-gray-400')}">${f.points >= 0 ? '+' : ''}${f.points} pts</span>
+        </div>
+      `).join('');
+
+      renderChart(asset.history, risk);
+      runSimulation();
+    }
+
+    async function fetchLiveTick(ticker) {
+      try {
+        const resp = await fetch(`https://mfinance.com.br/api/v1/stocks/${ticker}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data && data.lastPrice) {
+          const livePrice = Number(data.lastPrice);
+          document.getElementById('current-price').innerText = `R$ ${livePrice.toFixed(2)}`;
+          
+          const change = Number(data.change || 0);
+          const changeEl = document.getElementById('price-change');
+          changeEl.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}% hoje`;
+          changeEl.className = `text-xs font-semibold mt-0.5 ${change >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+
+          if (data.low && data.high) {
+            document.getElementById('day-range').innerText = `Mín: R$ ${Number(data.low).toFixed(2)} | Máx: R$ ${Number(data.high).toFixed(2)}`;
+          }
+
+          document.getElementById('live-tick-badge').classList.remove('hidden');
+
+          // Atualiza entrada
+          document.getElementById('metric-entry').innerText = `R$ ${livePrice.toFixed(2)}`;
+          
+          if (marketDatabase && marketDatabase.assets[ticker]) {
+            marketDatabase.assets[ticker].current_price = livePrice;
+            runSimulation();
+          }
+        }
+      } catch (e) {
+        document.getElementById('live-tick-badge').classList.add('hidden');
+      }
+    }
+
+    function renderChart(history, risk) {
+      if (!history || history.length === 0) return;
+      const ctx = document.getElementById('priceChart').getContext('2d');
+
+      const labels = history.map(h => h.date);
+      const closes = history.map(h => h.close);
+      const ema9 = history.map(h => h.ema9);
+      const ema21 = history.map(h => h.ema21);
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Preço Fechamento Real',
+              data: closes,
+              borderColor: '#38bdf8',
+              backgroundColor: 'rgba(56, 189, 248, 0.08)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.1,
+              pointRadius: 1
+            },
+            {
+              label: 'EMA 9 (Rápida)',
+              data: ema9,
+              borderColor: '#f59e0b',
+              borderWidth: 1.5,
+              borderDash: [3, 3],
+              pointRadius: 0
+            },
+            {
+              label: 'EMA 21 (Tendência)',
+              data: ema21,
+              borderColor: '#f97316',
+              borderWidth: 1.8,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(55, 65, 81, 0.2)' },
+              ticks: { color: '#9ca3af', font: { size: 9 }, maxTicksLimit: 7 }
+            },
+            y: {
+              grid: { color: 'rgba(55, 65, 81, 0.2)' },
+              ticks: {
+                color: '#9ca3af',
+                font: { size: 9 },
+                callback: v => `R$ ${v.toFixed(2)}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function runSimulation() {
+      if (!marketDatabase || !marketDatabase.assets[currentTicker]) return;
+      const asset = marketDatabase.assets[currentTicker];
+      const risk = asset.risk;
+      const price = asset.current_price;
+      const capital = Number(document.getElementById('sim-capital').value) || 0;
+
+      if (price <= 0 || capital <= 0) return;
+
+      const numShares = Math.floor(capital / price);
+      const totalInvested = numShares * price;
+      const maxLoss = numShares * (price - risk.stop_loss);
+      const gain1 = numShares * (risk.target_1 - price);
+      const gain2 = numShares * (risk.target_2 - price);
+
+      document.getElementById('sim-shares').innerText = `${numShares} ações`;
+      document.getElementById('sim-invested').innerText = `Total: R$ ${totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      document.getElementById('sim-loss').innerText = `- R$ ${maxLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('sim-loss-pct').innerText = `-${risk.risk_pct.toFixed(2)}% do capital`;
+
+      document.getElementById('sim-gain1').innerText = `+ R$ ${gain1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('sim-gain2').innerText = `+ R$ ${gain2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      // Venda estimada no alvo 2
+      const saleVal = numShares * risk.target_2;
+      const pctOf20k = (saleVal / 20000) * 100;
+      
+      document.getElementById('sim-tax-status').innerText = `${pctOf20k.toFixed(1)}% do teto (R$ ${saleVal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} de R$ 20.000)`;
+      document.getElementById('sim-tax-bar').style.width = `${Math.min(100, pctOf20k)}%`;
+
+      const msgEl = document.getElementById('sim-tax-msg');
+      if (saleVal <= 20000) {
+        document.getElementById('sim-tax-bar').className = 'h-full bg-emerald-500 transition-all duration-500';
+        msgEl.innerHTML = '✅ Operação dentro do teto mensal de R$ 20.000. Venda 100% <strong>isenta de Imposto de Renda</strong> sobre o lucro!';
+        msgEl.className = 'text-xs text-emerald-400/90 mt-2';
+      } else {
+        document.getElementById('sim-tax-bar').className = 'h-full bg-amber-500 transition-all duration-500';
+        msgEl.innerHTML = '⚠️ Atenção: A venda total ultrapassará R$ 20.000,00 no mês. Haverá incidência de 15% de IR sobre o lucro líquido via DARF.';
+        msgEl.className = 'text-xs text-amber-400 mt-2';
+      }
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('[id^="tab-btn-"]').forEach(btn => {
+        btn.classList.remove('border-emerald-500', 'text-emerald-400');
+        btn.classList.add('border-transparent', 'text-gray-400');
+      });
+
+      document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      activeBtn.classList.remove('border-transparent', 'text-gray-400');
+      activeBtn.classList.add('border-emerald-500', 'text-emerald-400');
+
+      if (tabId === 'compare') {
+        renderComparison();
+      }
+    }
+
+    function renderComparison() {
+      if (!marketDatabase || !marketDatabase.assets) return;
+      const itub = marketDatabase.assets['ITUB4'];
+      const bbdc = marketDatabase.assets['BBDC4'];
+
+      if (itub) {
+        document.getElementById('comp-itub-price').innerText = `R$ ${itub.current_price.toFixed(2)}`;
+        document.getElementById('comp-itub-signal').innerText = `Sinal: ${itub.signal} (${itub.score >= 0 ? '+' : ''}${itub.score})`;
+        document.getElementById('comp-itub-stop').innerText = `R$ ${itub.risk.stop_loss.toFixed(2)} (-${itub.risk.risk_pct.toFixed(2)}%)`;
+        document.getElementById('comp-itub-t1').innerText = `R$ ${itub.risk.target_1.toFixed(2)} (+${itub.risk.target_1_gain_pct.toFixed(2)}%)`;
+        document.getElementById('comp-itub-t2').innerText = `R$ ${itub.risk.target_2.toFixed(2)} (+${itub.risk.target_2_gain_pct.toFixed(2)}%)`;
+      }
+      if (bbdc) {
+        document.getElementById('comp-bbdc-price').innerText = `R$ ${bbdc.current_price.toFixed(2)}`;
+        document.getElementById('comp-bbdc-signal').innerText = `Sinal: ${bbdc.signal} (${bbdc.score >= 0 ? '+' : ''}${bbdc.score})`;
+        document.getElementById('comp-bbdc-stop').innerText = `R$ ${bbdc.risk.stop_loss.toFixed(2)} (-${bbdc.risk.risk_pct.toFixed(2)}%)`;
+        document.getElementById('comp-bbdc-t1').innerText = `R$ ${bbdc.risk.target_1.toFixed(2)} (+${bbdc.risk.target_1_gain_pct.toFixed(2)}%)`;
+        document.getElementById('comp-bbdc-t2').innerText = `R$ ${bbdc.risk.target_2.toFixed(2)} (+${bbdc.risk.target_2_gain_pct.toFixed(2)}%)`;
+      }
+    }
+
+    function refreshData() {
+      const icon = document.getElementById('refresh-icon');
+      icon.classList.add('animate-spin');
+      loadMarketDatabase().then(() => {
+        fetchLiveTick(currentTicker);
+      }).finally(() => {
+        setTimeout(() => icon.classList.remove('animate-spin'), 600);
+      });
+    }
+
+    // Inicialização
+    window.addEventListener('DOMContentLoaded', () => {
+      loadMarketDatabase().then(() => {
+        fetchLiveTick('ITUB4');
+      });
+    });
+  </script>
+</body>
+</html>
