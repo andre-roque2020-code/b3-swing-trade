@@ -1,0 +1,10 @@
+exclude:
+  - analyzer/
+  - .streamlit/
+  - __pycache__/
+  - app.py
+  - update_market_data.py
+  - requirements.txt
+  - iniciar_analisador.bat
+  - Executar_B3_Swing_Trade.ipynb
+  - b3_swing_trade_analyzer_deploy.zip
